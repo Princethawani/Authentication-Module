@@ -26,6 +26,11 @@ const ERROR_MAP: Record<string, { status: number; message: string }> = {
   TWO_FACTOR_NOT_SETUP:    { status: 400, message: '2FA has not been set up for this account' },
   TWO_FACTOR_NOT_ENABLED:  { status: 400, message: '2FA is not enabled for this account' },
   INVALID_TOTP_CODE:       { status: 401, message: 'Invalid or expired authentication code' },
+
+  // OAuth
+  OAUTH_ACCOUNT_NOT_FOUND:    { status: 404, message: 'OAuth account not found' },
+  CANNOT_UNLINK_ONLY_LOGIN:   { status: 400, message: 'Cannot unlink your only login method' },
+  INVALID_PROVIDER:           { status: 400, message: 'Invalid OAuth provider' },
 };
 
 // ── Global Error Handler ──────────────────────────────────────────────────────

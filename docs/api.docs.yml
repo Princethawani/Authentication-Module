@@ -389,6 +389,33 @@ components:
             type: string
           example: ['A1B2C3D4', 'E5F6G7H8', 'I9J0K1L2', 'M3N4O5P6', 'Q7R8S9T0', 'U1V2W3X4', 'Y5Z6A7B8', 'C9D0E1F2']
           description: One-time backup codes — each can only be used once. Store these securely.
+      
+    OAuthLinkedAccount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [google, github, apple]
+          example: google
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: john@gmail.com
+        displayName:
+          type: string
+          nullable: true
+          example: John Doe
+        avatarUrl:
+          type: string
+          nullable: true
+          example: https://lh3.googleusercontent.com/...
+        createdAt:
+          type: string
+          format: date-time
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -1310,6 +1337,187 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  
+  # ── OAuth2 / Social Login ─────────────────────────────────────────────────────
+
+  /api/oauth/google:
+    get:
+      tags: [OAuth2 / Social Login]
+      summary: Login with Google
+      description: |
+        Redirects the user to Google's OAuth consent screen.
+        After the user approves, Google redirects back to the callback URL.
+
+        **This endpoint is browser-only** — open it directly in a browser,
+        not via fetch/axios.
+      security: []
+      responses:
+        '302':
+          description: Redirects to Google OAuth consent screen
+
+  /api/oauth/google/callback:
+    get:
+      tags: [OAuth2 / Social Login]
+      summary: Google OAuth callback
+      description: |
+        Google redirects here after the user approves.
+        On success, redirects to your frontend with tokens in query params:
+
+        `OAUTH_SUCCESS_URL?accessToken=...&refreshToken=...&isNewUser=true`
+
+        On failure, redirects to:
+
+        `OAUTH_FAILURE_URL?error=...`
+      security: []
+      responses:
+        '302':
+          description: Redirects to frontend with tokens or error
+
+  /api/oauth/github:
+    get:
+      tags: [OAuth2 / Social Login]
+      summary: Login with GitHub
+      description: |
+        Redirects the user to GitHub's OAuth consent screen.
+
+        **This endpoint is browser-only** — open it directly in a browser,
+        not via fetch/axios.
+      security: []
+      responses:
+        '302':
+          description: Redirects to GitHub OAuth consent screen
+
+  /api/oauth/github/callback:
+    get:
+      tags: [OAuth2 / Social Login]
+      summary: GitHub OAuth callback
+      description: |
+        GitHub redirects here after the user approves.
+        On success, redirects to your frontend with tokens in query params:
+
+        `OAUTH_SUCCESS_URL?accessToken=...&refreshToken=...&isNewUser=true`
+
+        On failure, redirects to:
+
+        `OAUTH_FAILURE_URL?error=...`
+      security: []
+      responses:
+        '302':
+          description: Redirects to frontend with tokens or error
+  
+  /api/oauth/apple:
+    get:
+      tags: [OAuth2 / Social Login]
+      summary: Login with Apple
+      description: |
+        Redirects the user to Apple's OAuth consent screen.
+
+        **This endpoint is browser-only** — open it directly in a browser,
+        not via fetch/axios.
+
+        **Note:** Apple only sends the user's name on the very first login.
+        Subsequent logins will not include name information.
+      security: []
+      responses:
+        '302':
+          description: Redirects to Apple OAuth consent screen
+
+  /api/oauth/apple/callback:
+    post:
+      tags: [OAuth2 / Social Login]
+      summary: Apple OAuth callback
+      description: |
+        Apple redirects here after the user approves.
+
+        **Important:** Unlike Google and GitHub, Apple sends a POST request
+        to the callback URL, not a GET. Your frontend must handle this.
+
+        On success, redirects to your frontend with tokens in query params:
+
+        `OAUTH_SUCCESS_URL?accessToken=...&refreshToken=...&isNewUser=true`
+
+        On failure, redirects to:
+
+        `OAUTH_FAILURE_URL?error=...`
+
+        **Apple quirks:**
+        - Name is only provided on first login
+        - No avatar/profile picture provided
+        - Requires an Apple Developer account ($99/year)
+        - Only works with HTTPS in production
+      security: []
+      responses:
+        '302':
+          description: Redirects to frontend with tokens or error
+          
+  /api/oauth/linked:
+    get:
+      tags: [OAuth2 / Social Login]
+      summary: Get linked OAuth accounts
+      description: Returns all OAuth providers linked to the current user's account.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of linked OAuth accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OAuthLinkedAccount'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/oauth/unlink/{provider}:
+    delete:
+      tags: [OAuth2 / Social Login]
+      summary: Unlink an OAuth provider
+      description: |
+        Removes the connection between the current user and the specified
+        OAuth provider.
+
+        Will fail if this is the user's only login method.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [google, github, apple]
+          description: The OAuth provider to unlink
+          example: google
+      responses:
+        '200':
+          description: Provider unlinked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Cannot unlink only login method or invalid provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: OAuth account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 # ── Tags ──────────────────────────────────────────────────────────────────────
 
@@ -1326,3 +1534,5 @@ tags:
     description: Multi-app email configuration management — Admin role required
   - name: Two-Factor Authentication
     description: TOTP-based 2FA — setup, enable, disable, and validate during login
+  - name: OAuth2 / Social Login
+    description: Login with Google or GitHub — browser redirect flow. Link and unlink providers from your account.

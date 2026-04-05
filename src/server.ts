@@ -16,6 +16,9 @@ import emailConfigRoutes from './routes/emailconfig.routes';
 import { CleanupJob } from './utils/cleanup.job';
 import totpRoutes from './routes/totp.routes';
 
+import passport from '../src/config/passport';
+import oauthRoutes from './routes/oauth.routes';
+
 // ── Load Swagger Spec from YAML ───────────────────────────────────────────────
 
 const swaggerSpec = yaml.load(
@@ -47,6 +50,8 @@ function createApp(): Application {
   // ── Body Parsing ─────────────────────────────────────────────────────────────
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(passport.initialize());
+
 
   // ── Trust Proxy ──────────────────────────────────────────────────────────────
   // Needed to get real IP addresses when behind nginx/load balancer
@@ -66,6 +71,8 @@ function createApp(): Application {
   app.use('/api/auth', authRoutes);
   app.use('/api/emailconfig', emailConfigRoutes);
   app.use('/api/2fa', totpRoutes);
+  app.use('/api/oauth', oauthRoutes);
+
 
 
   // ── 404 Handler ──────────────────────────────────────────────────────────────
