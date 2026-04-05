@@ -351,6 +351,44 @@ components:
         environment:
           type: string
           example: development
+    TotpCodeRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 6
+          example: '123456'
+          description: 6-digit TOTP code from authenticator app or an 8-character backup code
+
+    TotpSetupResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+          example: JBSWY3DPEHPK3PXP
+          description: Raw TOTP secret — use this for manual entry in authenticator app
+        qrCodeUrl:
+          type: string
+          example: data:image/png;base64,...
+          description: Base64 QR code image — render this as an <img> tag
+        manualEntryCode:
+          type: string
+          example: JBSWY3DPEHPK3PXP
+          description: Same as secret — displayed separately for clarity in the UI
+
+    TotpEnableResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 2FA enabled successfully. Save your backup codes — they will not be shown again.
+        backupCodes:
+          type: array
+          items:
+            type: string
+          example: ['A1B2C3D4', 'E5F6G7H8', 'I9J0K1L2', 'M3N4O5P6', 'Q7R8S9T0', 'U1V2W3X4', 'Y5Z6A7B8', 'C9D0E1F2']
+          description: One-time backup codes — each can only be used once. Store these securely.
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -1108,6 +1146,170 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  # ── Two-Factor Authentication (TOTP) ─────────────────────────────────────────
+
+  /api/2fa/status:
+    get:
+      tags: [Two-Factor Authentication]
+      summary: Get 2FA status
+      description: Returns whether 2FA is enabled for the current user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 2FA status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isEnabled:
+                    type: boolean
+                    example: false
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/2fa/setup:
+    post:
+      tags: [Two-Factor Authentication]
+      summary: Generate 2FA setup (QR code + secret)
+      description: |
+        Generates a TOTP secret and returns a QR code for the user to scan
+        with their authenticator app (Google Authenticator, Authy, etc).
+
+        2FA is **not yet enabled** after this step — the user must call
+        `/api/2fa/enable` with a valid code to confirm setup.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: QR code and secret generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotpSetupResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/2fa/enable:
+    post:
+      tags: [Two-Factor Authentication]
+      summary: Enable 2FA by verifying setup code
+      description: |
+        Confirms 2FA setup by submitting the 6-digit code from the
+        authenticator app. Returns 8 one-time backup codes.
+
+        **Save the backup codes immediately — they will never be shown again.**
+        Each backup code can only be used once.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TotpCodeRequest'
+      responses:
+        '200':
+          description: 2FA enabled — backup codes returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotpEnableResponse'
+        '400':
+          description: 2FA not set up or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid or expired TOTP code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/2fa/disable:
+    post:
+      tags: [Two-Factor Authentication]
+      summary: Disable 2FA
+      description: |
+        Disables 2FA for the current user. Requires a valid TOTP code
+        or backup code to confirm the action.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TotpCodeRequest'
+      responses:
+        '200':
+          description: 2FA disabled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: 2FA not enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid TOTP code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/2fa/validate:
+    post:
+      tags: [Two-Factor Authentication]
+      summary: Validate 2FA code during login
+      description: |
+        Called during the login flow when the user has 2FA enabled.
+        After a successful password check, the client submits the
+        6-digit code here to complete authentication.
+
+        Also accepts backup codes in place of a TOTP code.
+        Each backup code can only be used once.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TotpCodeRequest'
+      responses:
+        '200':
+          description: 2FA validated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Invalid or expired authentication code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 # ── Tags ──────────────────────────────────────────────────────────────────────
 
@@ -1122,3 +1324,5 @@ tags:
     description: User management and role assignment — Admin role required
   - name: Email Config
     description: Multi-app email configuration management — Admin role required
+  - name: Two-Factor Authentication
+    description: TOTP-based 2FA — setup, enable, disable, and validate during login

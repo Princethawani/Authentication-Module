@@ -14,6 +14,7 @@ import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth.routes';
 import emailConfigRoutes from './routes/emailconfig.routes';
 import { CleanupJob } from './utils/cleanup.job';
+import totpRoutes from './routes/totp.routes';
 
 // ── Load Swagger Spec from YAML ───────────────────────────────────────────────
 
@@ -64,6 +65,8 @@ function createApp(): Application {
   // ── Routes ───────────────────────────────────────────────────────────────────
   app.use('/api/auth', authRoutes);
   app.use('/api/emailconfig', emailConfigRoutes);
+  app.use('/api/2fa', totpRoutes);
+
 
   // ── 404 Handler ──────────────────────────────────────────────────────────────
   app.use((req: Request, res: Response) => {

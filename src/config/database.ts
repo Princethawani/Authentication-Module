@@ -9,6 +9,7 @@ import { RefreshToken } from '../entities/RefreshToken';
 import { TokenBlacklist } from '../entities/TokenBlacklist';
 import { AppEmailConfig } from '../entities/AppEmailConfig';
 import { ActivityLog } from '../entities/ActivityLog';
+import { TwoFactorSecret } from '../entities/TwoFactorSecret';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -31,6 +32,8 @@ export const AppDataSource = new DataSource({
     TokenBlacklist,
     AppEmailConfig,
     ActivityLog,
+    TwoFactorSecret,   
+
   ],
 
   migrations: ['dist/migrations/*.js'],

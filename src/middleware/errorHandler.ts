@@ -21,6 +21,11 @@ const ERROR_MAP: Record<string, { status: number; message: string }> = {
   // Email config
   EMAIL_CONFIG_NOT_FOUND: { status: 404, message: 'Email config not found' },
   APP_ID_EXISTS:          { status: 409, message: 'An email config with this App ID already exists' },
+
+  // 2FA
+  TWO_FACTOR_NOT_SETUP:    { status: 400, message: '2FA has not been set up for this account' },
+  TWO_FACTOR_NOT_ENABLED:  { status: 400, message: '2FA is not enabled for this account' },
+  INVALID_TOTP_CODE:       { status: 401, message: 'Invalid or expired authentication code' },
 };
 
 // ── Global Error Handler ──────────────────────────────────────────────────────
