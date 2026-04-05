@@ -24,16 +24,16 @@ export class ActivityLog {
   id: string;
 
   @Index()
-  @Column()
+  @Column({ type: 'text' })
   userId: string;
 
-  @Column()
+  @Column({ type: 'text' })
   action: ActivityAction;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   ipAddress: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   userAgent: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -43,7 +43,6 @@ export class ActivityLog {
   @CreateDateColumn()
   createdAt: Date;
 
-  // Relations
   @ManyToOne(() => User, (user) => user.activityLogs, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;

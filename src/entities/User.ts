@@ -15,28 +15,28 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'text', unique: true })
   email: string;
 
-  @Column()
+  @Column({ type: 'text' })
   passwordHash: string;
 
-  @Column()
+  @Column({ type: 'text' })
   firstName: string;
 
-  @Column()
+  @Column({ type: 'text' })
   lastName: string;
 
   @Column({ default: false })
   isEmailVerified: boolean;
 
-  @Column({ nullable: true, unique: true })
+  @Column({ type: 'text', nullable: true, unique: true })
   emailVerificationToken: string | null;
 
   @Column({ nullable: true })
   emailVerificationExpiry: Date | null;
 
-  @Column({ nullable: true, unique: true })
+  @Column({ type: 'text', nullable: true, unique: true })
   passwordResetToken: string | null;
 
   @Column({ nullable: true })
@@ -60,7 +60,6 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // Relations
   @OneToMany(() => UserRole, (userRole) => userRole.user)
   roles: UserRole[];
 

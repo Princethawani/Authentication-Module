@@ -38,7 +38,7 @@ Built with **Node.js + TypeScript + Express + TypeORM + PostgreSQL + Redis**
 - ✅ JWT Bearer authentication
 - ✅ Password hashing with bcrypt (configurable rounds)
 - ✅ Redis-backed token blacklist — instant revocation
-- ✅ Rate limiting per route (login, register)
+- ✅ Rate limiting per route (login, register, forgot-password)
 - ✅ Account lockout after N failed logins
 - ✅ Refresh token reuse detection (revokes all sessions on replay attack)
 - ✅ CORS with configurable allowed origins
@@ -82,7 +82,7 @@ authserver/
 │   │   ├── redis.ts                ✅ Redis singleton — connect, disconnect, getRedis()
 │   │   └── database.ts             ✅ TypeORM DataSource — all entities registered here
 │   │
-│   ├── entities/                   ✅ TypeORM database models (replaces Prisma schema)
+│   ├── entities/                   ✅ TypeORM database models
 │   │   ├── User.ts                 ✅ Core user — email, password, lockout, verification
 │   │   ├── Role.ts                 ✅ Role names (Admin, User, Moderator)
 │   │   ├── UserRole.ts             ✅ Join table — composite PK (userId + roleId)
@@ -92,43 +92,45 @@ authserver/
 │   │   └── ActivityLog.ts          ✅ Audit log — LOGIN, LOGOUT, FAILED_LOGIN, etc.
 │   │
 │   ├── types/
-│   │   ├── index.ts                ← Shared TypeScript interfaces and types
-│   │   └── schemas.ts              ← Zod validation schemas (DTOs for all requests)
+│   │   ├── index.ts                ✅ Shared TypeScript interfaces and types
+│   │   └── schemas.ts              ✅ Zod validation schemas (DTOs for all requests)
 │   │
 │   ├── middleware/
-│   │   ├── auth.middleware.ts       ← JWT verify + blacklist check + role guard
-│   │   └── errorHandler.ts         ← Global Express error handler
+│   │   ├── auth.middleware.ts      ✅ JWT verify + blacklist check + role guard
+│   │   └── errorHandler.ts        ✅ Global Express error handler + error map
 │   │
 │   ├── services/
-│   │   ├── auth.service.ts         ← Register, login, logout, verify, reset password
-│   │   ├── token.service.ts        ← Generate, rotate, blacklist, cleanup tokens
-│   │   ├── email.service.ts        ← Send emails via Nodemailer + multi-app support
-│   │   └── emailconfig.service.ts  ← CRUD for AppEmailConfig
+│   │   ├── auth.service.ts         ✅ Register, login, logout, verify, reset password
+│   │   ├── token.service.ts        ✅ Generate, rotate, blacklist, cleanup tokens
+│   │   ├── email.service.ts        ✅ Send emails via Nodemailer + multi-app support
+│   │   └── emailconfig.service.ts  ✅ CRUD for AppEmailConfig
 │   │
 │   ├── controllers/
-│   │   ├── auth.controller.ts      ← Express handlers — calls auth service
-│   │   └── emailconfig.controller.ts ← Express handlers — calls emailconfig service
+│   │   ├── auth.controller.ts      ✅ Express handlers — calls auth service
+│   │   └── emailconfig.controller.ts ✅ Express handlers — calls emailconfig service
 │   │
 │   ├── routes/
-│   │   ├── auth.routes.ts          ← Route definitions + middleware wiring
-│   │   └── emailconfig.routes.ts   ← Route definitions + admin guard
+│   │   ├── auth.routes.ts          ✅ Route definitions + middleware + rate limiters
+│   │   └── emailconfig.routes.ts   ✅ Route definitions + admin guard
 │   │
 │   ├── utils/
-│   │   ├── cleanup.job.ts          ← Background job — purges expired tokens hourly
-│   │   └── seed.ts                 ← Seeds default roles + admin user + email config
+│   │   ├── cleanup.job.ts          ✅ Background job — purges expired tokens hourly
+│   │   └── seed.ts                 ✅ Seeds default roles + admin user + email config
 │   │
-│   └── server.ts                   ← App entry point — Express setup, plugin registration
+│   └── server.ts                   ✅ App entry point — Express setup, graceful shutdown
 │
 ├── .env                            ← Your local secrets (never commit this)
-├── .env.example                    ← Template — commit this so others know what's needed
+├── .env.example                    ✅ Template — commit this so others know what's needed
 ├── .gitignore                      ✅ node_modules, dist, .env, logs, etc.
-├── .dockerignore                   ← node_modules, .env, dist excluded from Docker image
-├── docker-compose.yml              ← Production: app + postgres + redis
-├── docker-compose.override.yml     ← Dev: hot reload + Adminer + Redis Commander
-├── Dockerfile                      ← Multi-stage build (deps → builder → slim runner)
-├── Makefile                        ← Convenience commands (make dev, make prod, etc.)
+├── .dockerignore                   ✅ node_modules, .env, dist excluded from Docker image
+├── docker-compose.yml              ✅ Production: app + postgres + redis
+├── docker-compose.override.yml     ✅ Dev: hot reload + Adminer + Redis Commander
+├── Dockerfile                      ✅ Multi-stage build (deps → builder → runner)
+├── Makefile                        ✅ Convenience commands
 ├── package.json                    ✅ All dependencies listed
-└── tsconfig.json                   ✅ experimentalDecorators + emitDecoratorMetadata enabled
+├── tsconfig.json                   ✅ experimentalDecorators + emitDecoratorMetadata enabled
+├── README.md                       ✅ This file
+└── LICENSE                         ✅ MIT License — Prince Thawani
 ```
 
 ---
@@ -156,7 +158,7 @@ authserver/
 | `PUT` | `/api/auth/profile` | Update profile | ✅ |
 | `GET` | `/api/auth/activity` | View activity log | ✅ |
 | `GET` | `/api/auth/sessions` | List active sessions | ✅ |
-| `POST` | `/api/auth/revoke-session/:id` | Revoke a specific session | ✅ |
+| `POST` | `/api/auth/revoke-session/:tokenId` | Revoke a specific session | ✅ |
 
 ### Admin
 
@@ -224,7 +226,7 @@ and immediately revokes **all sessions** for that user, forcing a full re-login.
 
 ## Multi-App Email (X-App-ID)
 
-Send `X-App-ID: <appId>` on any request that triggers an email.  
+Send `X-App-ID: <appId>` on any request that triggers an email.
 The server picks the matching active config from `app_email_configs` table.
 
 ```
@@ -281,6 +283,10 @@ SMTP_USERNAME=your@gmail.com
 SMTP_PASSWORD=your_app_password
 DEFAULT_FROM_EMAIL=noreply@authserver.com
 
+# Admin seed account — change in production!
+ADMIN_EMAIL=admin@authserver.com
+ADMIN_PASSWORD=Admin@123
+
 # Security
 BCRYPT_ROUNDS=12
 MAX_FAILED_LOGINS=5
@@ -299,7 +305,7 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 ```bash
 git clone <repo-url> && cd authserver
 cp .env.example .env        # fill in your secrets
-make docker-dev             # starts app + postgres + redis + admin UIs
+make dev                    # starts app + postgres + redis + admin UIs
 ```
 
 | Service | URL |
@@ -313,8 +319,8 @@ make docker-dev             # starts app + postgres + redis + admin UIs
 
 ```bash
 npm install
-cp .env.example .env
-npm run seed                # creates roles + admin user
+cp .env.example .env        # fill in your secrets
+npm run seed                # creates roles + admin user + default email config
 npm run dev
 ```
 
@@ -337,16 +343,19 @@ Created automatically by the seed script:
 ## Docker Commands
 
 ```bash
-# Dev (hot reload + Adminer + Redis Commander)
-make docker-dev
+# Dev — hot reload + Adminer + Redis Commander
+make dev
+
+# Dev in background
+make dev-bg
 
 # Production
 make prod
 
-# View logs
+# View app logs
 make logs
 
-# Stop everything
+# Stop all containers
 make down
 
 # Full teardown including volumes
@@ -424,6 +433,4 @@ activity_logs
 
 ---
 
-## License
-
-MIT — use this as a base for your own projects.
+See [LICENSE](./LICENSE) for full license terms.

@@ -1,0 +1,64 @@
+MIT License
+
+Copyright (c) 2025 Prince Thawani
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+ADDITIONAL TERMS — AuthServer
+
+1. ATTRIBUTION
+   If you use AuthServer as a base, template, or reference for your own
+   authentication system, a credit to the original author (Prince Thawani)
+   is appreciated but not required.
+
+2. SECURITY RESPONSIBILITY
+   This software is provided as a reusable authentication server. You are
+   solely responsible for securing your own deployment, including but not
+   limited to:
+     - Changing default admin credentials before going to production
+     - Keeping JWT secrets, database passwords, and SMTP credentials private
+     - Keeping dependencies up to date
+     - Configuring HTTPS in production environments
+   The author accepts no liability for security breaches resulting from
+   misconfiguration or misuse of this software.
+
+3. CREDENTIAL PROTECTION
+   Any secrets, credentials, or sensitive configuration values belonging to
+   Prince Thawani (including but not limited to SMTP passwords, JWT secrets,
+   and database credentials) that may appear in example files or documentation
+   are illustrative only and must NOT be reused in any deployment.
+
+4. NO WARRANTY FOR PRODUCTION USE
+   While AuthServer is built with security best practices, it is provided
+   without warranty of any kind. It is your responsibility to review,
+   audit, and test the code before deploying it in a production environment
+   handling real user data.
+
+5. DERIVATIVE WORKS
+   You are free to fork, modify, and build upon AuthServer for both personal
+   and commercial projects. If you redistribute a modified version publicly,
+   you must clearly state that changes were made to the original work and
+   retain this license and copyright notice.
+
+---
+
+For permissions beyond the scope of this license, contact:
+Prince Thawani — info@princethawani.com
