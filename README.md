@@ -56,6 +56,19 @@ Built with **Node.js + TypeScript + Express + TypeORM + PostgreSQL + Redis**
 - ✅ Session management (list & revoke active sessions)
 - ✅ Admin: list all users, assign/remove roles
 
+### Two-Factor Authentication
+- ✅ TOTP-based 2FA (Google Authenticator, Authy, etc.)
+- ✅ QR code generation for easy setup
+- ✅ 8 one-time backup codes per user
+- ✅ Backup code single-use enforcement
+
+### OAuth2 / Social Login
+- ✅ Google OAuth2
+- ✅ GitHub OAuth2
+- ✅ Apple Sign In
+- ✅ Auto account creation on first OAuth login
+- ✅ Link / unlink OAuth providers per account
+
 ### Multi-App Email (X-App-ID)
 - ✅ One server, unlimited branded apps via `X-App-ID` header
 - ✅ Database-driven email config per app
@@ -80,16 +93,19 @@ authserver/
 │   ├── config/
 │   │   ├── env.ts                  ✅ Env vars — validated with Zod, typed export
 │   │   ├── redis.ts                ✅ Redis singleton — connect, disconnect, getRedis()
-│   │   └── database.ts             ✅ TypeORM DataSource — all entities registered here
+│   │   ├── database.ts             ✅ TypeORM DataSource — glob entity loading
+│   │   └── passport.ts             ✅ Passport strategies — Google, GitHub, Apple
 │   │
-│   ├── entities/                   ✅ TypeORM database models
+│   ├── entities/                   ✅ TypeORM database models (auto-loaded via glob)
 │   │   ├── User.ts                 ✅ Core user — email, password, lockout, verification
 │   │   ├── Role.ts                 ✅ Role names (Admin, User, Moderator)
 │   │   ├── UserRole.ts             ✅ Join table — composite PK (userId + roleId)
 │   │   ├── RefreshToken.ts         ✅ Refresh tokens — indexed, with device/IP info
 │   │   ├── TokenBlacklist.ts       ✅ Revoked access tokens — Redis + DB fallback
 │   │   ├── AppEmailConfig.ts       ✅ Per-app SMTP config — multi-app email support
-│   │   └── ActivityLog.ts          ✅ Audit log — LOGIN, LOGOUT, FAILED_LOGIN, etc.
+│   │   ├── ActivityLog.ts          ✅ Audit log — LOGIN, LOGOUT, FAILED_LOGIN, etc.
+│   │   ├── TwoFactorSecret.ts      ✅ TOTP secrets + backup codes per user
+│   │   └── OAuthAccount.ts         ✅ Linked OAuth provider accounts per user
 │   │
 │   ├── types/
 │   │   ├── index.ts                ✅ Shared TypeScript interfaces and types
@@ -103,15 +119,21 @@ authserver/
 │   │   ├── auth.service.ts         ✅ Register, login, logout, verify, reset password
 │   │   ├── token.service.ts        ✅ Generate, rotate, blacklist, cleanup tokens
 │   │   ├── email.service.ts        ✅ Send emails via Nodemailer + multi-app support
-│   │   └── emailconfig.service.ts  ✅ CRUD for AppEmailConfig
+│   │   ├── emailconfig.service.ts  ✅ CRUD for AppEmailConfig
+│   │   ├── totp.service.ts         ✅ TOTP setup, enable, disable, validate, backup codes
+│   │   └── oauth.service.ts        ✅ OAuth login — find/create/link user accounts
 │   │
 │   ├── controllers/
 │   │   ├── auth.controller.ts      ✅ Express handlers — calls auth service
-│   │   └── emailconfig.controller.ts ✅ Express handlers — calls emailconfig service
+│   │   ├── emailconfig.controller.ts ✅ Express handlers — calls emailconfig service
+│   │   ├── totp.controller.ts      ✅ 2FA setup, enable, disable, validate
+│   │   └── oauth.controller.ts     ✅ OAuth redirects and callbacks
 │   │
 │   ├── routes/
 │   │   ├── auth.routes.ts          ✅ Route definitions + middleware + rate limiters
-│   │   └── emailconfig.routes.ts   ✅ Route definitions + admin guard
+│   │   ├── emailconfig.routes.ts   ✅ Route definitions + admin guard
+│   │   ├── totp.routes.ts          ✅ 2FA routes — all require authentication
+│   │   └── oauth.routes.ts         ✅ OAuth routes — Google, GitHub, Apple
 │   │
 │   ├── utils/
 │   │   ├── cleanup.job.ts          ✅ Background job — purges expired tokens hourly
@@ -119,6 +141,7 @@ authserver/
 │   │
 │   └── server.ts                   ✅ App entry point — Express setup, graceful shutdown
 │
+├── api.docs.yaml                   ✅ OpenAPI 3.0 spec — import into Postman / Insomnia
 ├── .env                            ← Your local secrets (never commit this)
 ├── .env.example                    ✅ Template — commit this so others know what's needed
 ├── .gitignore                      ✅ node_modules, dist, .env, logs, etc.
@@ -131,6 +154,7 @@ authserver/
 ├── tsconfig.json                   ✅ experimentalDecorators + emitDecoratorMetadata enabled
 ├── README.md                       ✅ This file
 └── LICENSE                         ✅ MIT License — Prince Thawani
+
 ```
 
 ---
@@ -179,6 +203,29 @@ authserver/
 | `DELETE` | `/api/emailconfig/:id` | Delete config |
 | `POST` | `/api/emailconfig/:id/toggle` | Enable / disable config |
 
+### Two-Factor Authentication
+
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `GET` | `/api/2fa/status` | Check if 2FA is enabled | ✅ |
+| `POST` | `/api/2fa/setup` | Generate QR code + secret | ✅ |
+| `POST` | `/api/2fa/enable` | Confirm setup with a code | ✅ |
+| `POST` | `/api/2fa/disable` | Disable 2FA | ✅ |
+| `POST` | `/api/2fa/validate` | Validate code during login | ✅ |
+
+### OAuth2 / Social Login
+
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `GET` | `/api/oauth/google` | Redirect to Google login | No |
+| `GET` | `/api/oauth/google/callback` | Google OAuth callback | No |
+| `GET` | `/api/oauth/github` | Redirect to GitHub login | No |
+| `GET` | `/api/oauth/github/callback` | GitHub OAuth callback | No |
+| `GET` | `/api/oauth/apple` | Redirect to Apple login | No |
+| `POST` | `/api/oauth/apple/callback` | Apple OAuth callback | No |
+| `GET` | `/api/oauth/linked` | List linked OAuth accounts | ✅ |
+| `DELETE` | `/api/oauth/unlink/:provider` | Unlink an OAuth provider | ✅ |
+
 ---
 
 ## Authentication Flow
@@ -222,6 +269,264 @@ Client ──POST /logout──▶ AuthServer ──▶ Blacklist accessToken in
 If a refresh token is used more than once (replay attack), the server detects this
 and immediately revokes **all sessions** for that user, forcing a full re-login.
 
+### OAuth Flow
+
+```
+Browser  ──GET /api/oauth/google──▶ AuthServer ──▶ Redirect to Google
+Google   ──▶ User approves
+Google   ──GET /api/oauth/google/callback──▶ AuthServer
+                                          ──▶ Find or create user
+                                          ──▶ Generate JWT tokens
+                                          ──▶ Redirect to frontend
+                                              ?accessToken=...
+                                              &refreshToken=...
+                                              &isNewUser=true
+```
+
+---
+
+## OAuth Setup Guides
+
+### Google OAuth
+
+**Step 1 — Create a Google Cloud Project**
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+2. Click **Select a project** → **New Project**
+3. Give it a name and click **Create**
+
+**Step 2 — Enable the OAuth API**
+
+1. In the left menu go to **APIs & Services** → **Library**
+2. Search for **Google+ API** or **Google Identity** and enable it
+
+**Step 3 — Configure the OAuth consent screen**
+
+1. Go to **APIs & Services** → **OAuth consent screen**
+2. Choose **External** (for testing) or **Internal** (for org only)
+3. Fill in app name, support email, and developer contact email
+4. Add scopes: `email`, `profile`, `openid`
+5. Add your email to **Test users** while in development
+
+**Step 4 — Create credentials**
+
+1. Go to **APIs & Services** → **Credentials**
+2. Click **Create Credentials** → **OAuth 2.0 Client IDs**
+3. Application type: **Web application**
+4. Add **Authorized redirect URIs**:
+   - Development: `http://localhost:3000/api/oauth/google/callback`
+   - Production: `https://yourdomain.com/api/oauth/google/callback`
+5. Click **Create**
+6. Copy the **Client ID** and **Client Secret**
+
+**Step 5 — Add to `.env`**
+
+```bash
+GOOGLE_CLIENT_ID=123456789-abc123.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-your_secret_here
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/oauth/google/callback
+```
+
+---
+
+### GitHub OAuth
+
+**Step 1 — Create a GitHub OAuth App**
+
+1. Go to [github.com/settings/developers](https://github.com/settings/developers)
+2. Click **OAuth Apps** → **New OAuth App**
+3. Fill in:
+   - **Application name**: AuthServer (or your app name)
+   - **Homepage URL**: `http://localhost:3000`
+   - **Authorization callback URL**: `http://localhost:3000/api/oauth/github/callback`
+4. Click **Register application**
+
+**Step 2 — Get your credentials**
+
+1. Copy the **Client ID** shown on the app page
+2. Click **Generate a new client secret**
+3. Copy the **Client Secret** immediately — it won't be shown again
+
+**Step 3 — Add to `.env`**
+
+```bash
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GITHUB_CALLBACK_URL=http://localhost:3000/api/oauth/github/callback
+```
+
+> **Note:** For production, go back to your GitHub OAuth App settings and update the **Authorization callback URL** to your production domain.
+
+---
+
+### Apple Sign In
+
+> Apple Sign In requires an **Apple Developer account** ($99/year) and only works with **HTTPS** in production. For local development you can test the flow with ngrok.
+
+**Step 1 — Enable Sign In with Apple**
+
+1. Go to [developer.apple.com](https://developer.apple.com)
+2. Go to **Certificates, Identifiers & Profiles**
+3. Click **Identifiers** → select your App ID (or create one)
+4. Enable **Sign In with Apple** and click **Edit**
+5. Configure domains and return URLs:
+   - Development (via ngrok): `https://your-ngrok-url.ngrok.io/api/oauth/apple/callback`
+   - Production: `https://yourdomain.com/api/oauth/apple/callback`
+6. Save
+
+**Step 2 — Create a Services ID (this is your Client ID)**
+
+1. In **Identifiers**, click **+** and choose **Services IDs**
+2. Give it a description and a unique identifier e.g. `com.yourapp.auth`
+3. Enable **Sign In with Apple**
+4. Click **Configure** and add your domain and return URL from Step 1
+5. Save and register — this identifier becomes your `APPLE_CLIENT_ID`
+
+**Step 3 — Create a Key**
+
+1. In **Keys**, click **+**
+2. Give it a name, enable **Sign In with Apple**
+3. Click **Configure** → select your Primary App ID
+4. Click **Save** → **Continue** → **Register**
+5. **Download the `.p8` file immediately** — you can only download it once
+6. Note your **Key ID** shown on the page
+
+**Step 4 — Get your Team ID**
+
+1. Go to [developer.apple.com/account](https://developer.apple.com/account)
+2. Your **Team ID** is shown in the top right corner (10 characters)
+
+**Step 5 — Prepare your private key**
+
+Open the downloaded `.p8` file in a text editor. It looks like this:
+
+```
+-----BEGIN PRIVATE KEY-----
+MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg...
+-----END PRIVATE KEY-----
+```
+
+For the `.env` file, replace newlines with `\n`:
+
+```bash
+APPLE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMGByqGSM49...\n-----END PRIVATE KEY-----
+```
+
+**Step 6 — Add to `.env`**
+
+```bash
+APPLE_CLIENT_ID=com.yourapp.auth
+APPLE_TEAM_ID=ABCD1234EF
+APPLE_KEY_ID=ABC123DEFG
+APPLE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\nYOUR_KEY_CONTENT_HERE\n-----END PRIVATE KEY-----
+APPLE_CALLBACK_URL=https://your-ngrok-url.ngrok.io/api/oauth/apple/callback
+```
+
+> **Apple quirks to be aware of:**
+> - Apple only sends the user's **name on the very first login**. It is never sent again. The server saves it immediately on first login.
+> - Apple does **not provide a profile picture**.
+> - The callback is a **POST request**, not GET like Google/GitHub.
+> - Apple requires a **real HTTPS domain** — localhost won't work. Use [ngrok](https://ngrok.com) for local testing.
+
+**Testing Apple locally with ngrok:**
+
+```bash
+# Install ngrok and expose your local server
+ngrok http 3000
+
+# Use the https ngrok URL as your callback URL
+# e.g. https://abc123.ngrok.io/api/oauth/apple/callback
+# Update APPLE_CALLBACK_URL in .env to match
+```
+
+---
+
+## Frontend OAuth Integration
+
+After a successful OAuth login the server redirects to your frontend with tokens in the URL:
+
+```
+http://localhost:5173/auth/success?accessToken=eyJ...&refreshToken=abc123...&isNewUser=true
+```
+
+**React example — handle the redirect:**
+
+```javascript
+// pages/auth/success.jsx
+import { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+
+export default function AuthSuccess() {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const accessToken = params.get('accessToken');
+    const refreshToken = params.get('refreshToken');
+    const isNewUser = params.get('isNewUser') === 'true';
+
+    if (!accessToken || !refreshToken) {
+      navigate('/login?error=oauth_failed');
+      return;
+    }
+
+    // Store tokens securely
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+
+    // Redirect based on whether this is a new user
+    navigate(isNewUser ? '/onboarding' : '/dashboard');
+  }, []);
+
+  return <p>Signing you in...</p>;
+}
+```
+
+**Trigger OAuth login — just open the URL in the browser:**
+
+```javascript
+// Google
+window.location.href = 'http://localhost:3000/api/oauth/google';
+
+// GitHub
+window.location.href = 'http://localhost:3000/api/oauth/github';
+
+// Apple
+window.location.href = 'http://localhost:3000/api/oauth/apple';
+```
+
+**Configure redirect URLs in `.env`:**
+
+```bash
+OAUTH_SUCCESS_URL=http://localhost:5173/auth/success
+OAUTH_FAILURE_URL=http://localhost:5173/auth/failure
+```
+
+---
+
+## Two-Factor Authentication Flow
+
+```
+SETUP
+─────
+POST /api/2fa/setup    ──▶ Returns { secret, qrCodeUrl, manualEntryCode }
+                           Show qrCodeUrl as <img src={qrCodeUrl} />
+                           User scans with Google Authenticator / Authy
+
+ENABLE
+──────
+POST /api/2fa/enable   ──▶ Body: { code: "123456" }
+                       ◀── Returns { message, backupCodes: [...8 codes] }
+                           Save backup codes — shown ONCE, never again
+
+LOGIN WITH 2FA
+──────────────
+POST /api/auth/login   ──▶ Password verified
+                       ◀── { accessToken, refreshToken, user }
+POST /api/2fa/validate ──▶ Body: { code: "123456" }
+                       ◀── { message: "2FA validated successfully" }
+```
+
 ---
 
 ## Multi-App Email (X-App-ID)
@@ -234,18 +539,6 @@ Football App  ──▶  X-App-ID: football  ──▶  noreply@football.com
 Gaming App    ──▶  X-App-ID: gaming    ──▶  noreply@gaming.com
 E-Commerce    ──▶  X-App-ID: store     ──▶  noreply@store.com
 (no header)   ──▶  uses first active config as default
-```
-
-**Client example (JavaScript):**
-```javascript
-fetch('/api/auth/register', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-App-ID': 'football'
-  },
-  body: JSON.stringify({ email, password, firstName, lastName })
-});
 ```
 
 ---
@@ -294,6 +587,27 @@ LOCKOUT_DURATION_MINUTES=15
 
 # CORS
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+
+# OAuth — Google
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/oauth/google/callback
+
+# OAuth — GitHub
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GITHUB_CALLBACK_URL=http://localhost:3000/api/oauth/github/callback
+
+# OAuth — Apple
+APPLE_CLIENT_ID=com.yourapp.auth
+APPLE_TEAM_ID=ABCD1234EF
+APPLE_KEY_ID=ABC123DEFG
+APPLE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\nYOUR_KEY\n-----END PRIVATE KEY-----
+APPLE_CALLBACK_URL=http://localhost:3000/api/oauth/apple/callback
+
+# OAuth redirect URLs — point these to your frontend
+OAUTH_SUCCESS_URL=http://localhost:5173/auth/success
+OAUTH_FAILURE_URL=http://localhost:5173/auth/failure
 ```
 
 ---
@@ -417,15 +731,33 @@ activity_logs
  ├── ipAddress / userAgent
  ├── metadata (jsonb)
  └── createdAt (indexed)
+
+two_factor_secrets
+ ├── id (uuid, PK)
+ ├── userId (unique, FK → users)
+ ├── secret
+ ├── isEnabled
+ └── backupCodes          ← comma-separated hashed backup codes
+
+oauth_accounts
+ ├── id (uuid, PK)
+ ├── userId (FK → users, indexed)
+ ├── provider             ← google | github | apple
+ ├── providerAccountId (indexed)
+ ├── email
+ ├── displayName
+ ├── avatarUrl
+ ├── accessToken
+ └── refreshToken
 ```
 
 ---
 
 ## Roadmap
 
-- [ ] Two-factor authentication (TOTP)
-- [ ] OAuth2 / OpenID Connect (Google, GitHub, Apple)
-- [ ] Social login
+- ✅ Two-factor authentication (TOTP)
+- ✅ OAuth2 / OpenID Connect (Google, GitHub, Apple)
+- ✅ Social login
 - [ ] API key authentication
 - [ ] Email template customization per app
 - [ ] WebAuthn / Passkeys
