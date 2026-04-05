@@ -22,7 +22,7 @@ export class RefreshToken {
   @Column({ type: 'text' })
   userId: string;
 
-  @Column()
+  @Column({ type: 'timestamptz' })
   expiresAt: Date;
 
   @Column({ default: false })
@@ -34,7 +34,7 @@ export class RefreshToken {
   @Column({ type: 'text', nullable: true })
   ipAddress: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   revokedAt: Date | null;
 
   @CreateDateColumn()

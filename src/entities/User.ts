@@ -33,13 +33,13 @@ export class User {
   @Column({ type: 'text', nullable: true, unique: true })
   emailVerificationToken: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   emailVerificationExpiry: Date | null;
 
   @Column({ type: 'text', nullable: true, unique: true })
   passwordResetToken: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   passwordResetExpiry: Date | null;
 
   @Column({ default: true })
@@ -48,10 +48,10 @@ export class User {
   @Column({ default: 0 })
   failedLoginAttempts: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   lockoutUntil: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   lastLoginAt: Date | null;
 
   @CreateDateColumn()

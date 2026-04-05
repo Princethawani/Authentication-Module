@@ -41,8 +41,31 @@ const envSchema = z.object({
   // CORS
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
 
-    ADMIN_EMAIL: z.string().email().default('admin@authserver.com'),
+  // SEEDER
+  ADMIN_EMAIL: z.string().email().default('admin@authserver.com'),
   ADMIN_PASSWORD: z.string().default('Admin@123'),
+
+  // OAuth — Google
+  GOOGLE_CLIENT_ID: z.string().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().default(''),
+  GOOGLE_CALLBACK_URL: z.string().default('http://localhost:3000/api/oauth/google/callback'),
+
+  // OAuth — GitHub
+  GITHUB_CLIENT_ID: z.string().default(''),
+  GITHUB_CLIENT_SECRET: z.string().default(''),
+  GITHUB_CALLBACK_URL: z.string().default('http://localhost:3000/api/oauth/github/callback'),
+
+  // OAuth — Apple
+  APPLE_CLIENT_ID: z.string().default(''),
+  APPLE_TEAM_ID: z.string().default(''),
+  APPLE_KEY_ID: z.string().default(''),
+  APPLE_PRIVATE_KEY: z.string().default(''),
+  APPLE_CALLBACK_URL: z.string().default('http://localhost:3000/api/oauth/apple/callback'),
+
+  // OAuth redirect URLs
+  OAUTH_SUCCESS_URL: z.string().default('http://localhost:5173/auth/success'),
+  OAUTH_FAILURE_URL: z.string().default('http://localhost:5173/auth/failure'),
+
 });
 
 // Validate — crash early if something is wrong

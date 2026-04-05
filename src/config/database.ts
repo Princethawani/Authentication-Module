@@ -1,14 +1,5 @@
-import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { env, DB_PORT } from './env';
-
-import { User } from '../entities/User';
-import { Role } from '../entities/Role';
-import { UserRole } from '../entities/UserRole';
-import { RefreshToken } from '../entities/RefreshToken';
-import { TokenBlacklist } from '../entities/TokenBlacklist';
-import { AppEmailConfig } from '../entities/AppEmailConfig';
-import { ActivityLog } from '../entities/ActivityLog';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -17,23 +8,20 @@ export const AppDataSource = new DataSource({
   username: env.DB_USERNAME,
   password: env.DB_PASSWORD,
   database: env.DB_NAME,
-
-  // In production set this to false and use migrations instead
   synchronize: env.NODE_ENV === 'development',
-
   logging: env.NODE_ENV === 'development',
 
-  entities: [
-    User,
-    Role,
-    UserRole,
-    RefreshToken,
-    TokenBlacklist,
-    AppEmailConfig,
-    ActivityLog,
-  ],
+  // Dev — TypeScript source files
+  // Prod — compiled JavaScript files
+  entities:
+    env.NODE_ENV === 'development'
+      ? ['src/**/entities/*.ts']
+      : ['dist/**/entities/*.js'],
 
-  migrations: ['dist/migrations/*.js'],
+  migrations:
+    env.NODE_ENV === 'development'
+      ? ['src/migrations/*.ts']
+      : ['dist/migrations/*.js'],
 
   ssl: env.NODE_ENV === 'production'
     ? { rejectUnauthorized: false }
