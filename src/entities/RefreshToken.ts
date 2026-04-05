@@ -15,11 +15,11 @@ export class RefreshToken {
   id: string;
 
   @Index()
-  @Column({ unique: true })
+  @Column({ type: 'text', unique: true })
   token: string;
 
   @Index()
-  @Column()
+  @Column({ type: 'text' })
   userId: string;
 
   @Column()
@@ -28,10 +28,10 @@ export class RefreshToken {
   @Column({ default: false })
   isRevoked: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   deviceInfo: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   ipAddress: string | null;
 
   @Column({ nullable: true })
@@ -40,7 +40,6 @@ export class RefreshToken {
   @CreateDateColumn()
   createdAt: Date;
 
-  // Relations
   @ManyToOne(() => User, (user) => user.refreshTokens, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;

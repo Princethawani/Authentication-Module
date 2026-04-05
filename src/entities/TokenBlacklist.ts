@@ -12,7 +12,7 @@ export class TokenBlacklist {
   id: string;
 
   @Index()
-  @Column({ unique: true })
+  @Column({ type: 'text', unique: true })
   token: string;
 
   @Index()

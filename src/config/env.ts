@@ -40,6 +40,9 @@ const envSchema = z.object({
 
   // CORS
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
+
+    ADMIN_EMAIL: z.string().email().default('admin@authserver.com'),
+  ADMIN_PASSWORD: z.string().default('Admin@123'),
 });
 
 // Validate — crash early if something is wrong
